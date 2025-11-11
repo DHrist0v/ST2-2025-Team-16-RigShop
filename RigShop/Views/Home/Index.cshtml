@@ -1,0 +1,326 @@
+﻿@{
+    ViewData["Title"] = "Home";
+    var deals = ViewBag.TodaysDeals as List<RigShop.Web.Models.Product>;
+    var offers = ViewBag.OffersForYou as List<RigShop.Web.Models.Product>;
+    var isAdmin = bool.TryParse(Context.Session.GetString("IsAdmin"), out var a) && a;
+}
+
+<div class="container-fluid mt-4">
+    <!-- Today's Deals Carousel -->
+    <section class="mb-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="fw-bold text-primary">
+                <i class="fas fa-bolt me-2"></i>Today's Deals
+            </h2>
+            @if (isAdmin)
+            {
+                <a asp-controller="Products" asp-action="Create" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-plus me-1"></i>Add Deal
+                </a>
+            }
+        </div>
+
+        <div id="todayDealsCarousel" class="carousel slide" data-bs-ride="carousel">
+            <div class="carousel-inner">
+                @if (deals != null && deals.Any())
+                {
+                    var slideCount = (int)Math.Ceiling(deals.Count / 3.0);
+
+                    @for (int slideIndex = 0; slideIndex < slideCount; slideIndex++)
+                    {
+                        <div class="carousel-item @(slideIndex == 0 ? "active" : "")">
+                            <div class="row justify-content-center">
+                                @for (int productIndex = slideIndex * 3; productIndex < (slideIndex * 3) + 3 && productIndex < deals.Count; productIndex++)
+                                {
+                                    var deal = deals[productIndex];
+                                    <div class="col-lg-4 col-md-6 mb-4">
+                                        <div class="card h-100 shadow-lg border-0 deal-card">
+                                            <div class="card-img-top-container">
+                                                <img src="@deal.ImageUrl" class="card-img-top" alt="@deal.Name"
+                                                     onerror="this.src='https://via.placeholder.com/300x200/3B82F6/FFFFFF?text=PC+Part'">
+                                                <div class="deal-badge">HOT DEAL</div>
+                                            </div>
+                                            <div class="card-body text-center">
+                                                <h5 class="card-title fw-bold">@deal.Name</h5>
+                                                <p class="card-text text-muted">@deal.Description</p>
+                                                <div class="price-section mb-3">
+                                                    <span class="h4 text-primary fw-bold">$@deal.Price.ToString("0.00")</span>
+                                                    @if (deal.Stock > 0)
+                                                    {
+                                                        <span class="badge bg-success ms-2">In Stock</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-danger ms-2">Out of Stock</span>
+                                                    }
+                                                </div>
+                                                <a asp-controller="Products" asp-action="Details" asp-route-id="@deal.Id"
+                                                   class="btn btn-primary btn-lg w-100">
+                                                    <i class="fas fa-shopping-cart me-2"></i>View Deal
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="carousel-item active">
+                        <div class="text-center py-5">
+                            <i class="fas fa-tags fa-3x text-muted mb-3"></i>
+                            <h4 class="text-muted">No deals available right now</h4>
+                            <p class="text-muted">Check back later for amazing deals!</p>
+                            @if (isAdmin)
+                            {
+                                <a asp-controller="Products" asp-action="Create" class="btn btn-primary mt-3">
+                                    <i class="fas fa-plus me-2"></i>Create First Deal
+                                </a>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+
+            @if (deals != null && deals.Count > 3)
+            {
+                <button class="carousel-control-prev" type="button" data-bs-target="#todayDealsCarousel" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Previous</span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#todayDealsCarousel" data-bs-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Next</span>
+                </button>
+            }
+        </div>
+    </section>
+
+    <!-- Offers for You -->
+    <section class="mb-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h3 class="fw-bold text-success mb-1">
+                    <i class="fas fa-gift me-2"></i>Offers for You
+                </h3>
+                <p class="text-muted small mb-0">
+                    <i class="fas fa-lightbulb me-1"></i>
+                    @if (Context.Session.GetInt32("UserId") != null)
+                    {
+                        <text>Personalized just for you!</text>
+                    }
+                    else
+                    {
+                        <text>Trending products you might like</text>
+                    }
+                </p>
+            </div>
+            <a asp-controller="Products" asp-action="Index" class="btn btn-outline-success btn-sm">
+                View All <i class="fas fa-arrow-right ms-1"></i>
+            </a>
+        </div>
+
+        <div class="row">
+            @if (offers != null && offers.Any())
+            {
+                foreach (var offer in offers)
+                {
+                    <div class="col-12 mb-3">
+                        <div class="card offer-card border-0 shadow-sm">
+                            <div class="row g-0">
+                                <div class="col-md-2 position-relative">
+                                    <img src="@offer.ImageUrl" class="img-fluid rounded-start h-100 offer-image" alt="@offer.Name"
+                                         onerror="this.src='https://via.placeholder.com/150x150/10B981/FFFFFF?text=PC+Part'"
+                                         style="object-fit: cover; width: 100%; height: 150px;">
+                                    <!-- Offer Badge -->
+                                </div>
+                                <div class="col-md-8">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <h6 class="card-title fw-bold mb-1">@offer.Name</h6>
+                                            <span class="badge bg-success">MATCH</span>
+                                        </div>
+                                        <p class="card-text text-muted small mb-2">
+                                            @(offer.Description?.Length > 100 ? offer.Description.Substring(0, 100) + "..." : offer.Description)
+                                        </p>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <span class="h6 text-success mb-0">$@offer.Price.ToString("0.00")</span>
+                                                <small class="text-muted d-block">
+                                                    <i class="fas @(offer.Stock > 0 ? "fa-check text-success" : "fa-times text-danger") me-1"></i>
+                                                    @(offer.Stock > 0 ? $"{offer.Stock} available" : "Out of stock")
+                                                </small>
+                                            </div>
+                                            @if (offer.Category != null)
+                                            {
+                                                <span class="badge bg-light text-dark">
+                                                    <i class="fas fa-tag me-1"></i>@offer.Category.Name
+                                                </span>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-2 d-flex align-items-center justify-content-center p-3">
+                                    <a asp-controller="Products" asp-action="Details" asp-route-id="@offer.Id"
+                                       class="btn btn-success w-100">
+                                        <i class="fas fa-eye me-1"></i>View
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="col-12 text-center py-4">
+                    <i class="fas fa-gift fa-2x text-muted mb-3"></i>
+                    <h5 class="text-muted">No personalized offers yet</h5>
+                    <p class="text-muted mb-3">Start shopping to get personalized recommendations!</p>
+                    <a asp-controller="Products" asp-action="Index" class="btn btn-success">
+                        <i class="fas fa-shopping-bag me-2"></i>Start Shopping
+                    </a>
+                </div>
+            }
+        </div>
+    </section>
+</div>
+
+<style>
+    .deal-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border-radius: 15px;
+        overflow: hidden;
+    }
+
+        .deal-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+        }
+
+    .card-img-top-container {
+        position: relative;
+        height: 200px;
+        overflow: hidden;
+    }
+
+    .card-img-top {
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.3s ease;
+    }
+
+    .deal-card:hover .card-img-top {
+        transform: scale(1.05);
+    }
+
+    .deal-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: linear-gradient(45deg, #FF6B6B, #FF8E53);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: bold;
+    }
+
+    .offer-card {
+        transition: all 0.3s ease;
+        border-radius: 10px;
+    }
+
+        .offer-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
+        }
+
+    .offer-image {
+        transition: transform 0.3s ease;
+    }
+
+    .offer-card:hover .offer-image {
+        transform: scale(1.1);
+    }
+
+    .sidebar {
+        min-height: calc(100vh - 76px);
+        box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    }
+
+    .nav-link {
+        transition: all 0.3s ease;
+        border-radius: 5px;
+        margin: 2px 0;
+    }
+
+        .nav-link:hover {
+            background-color: #e9ecef;
+            transform: translateX(3px);
+        }
+
+    .carousel-controls {
+        display: flex;
+        gap: 10px;
+    }
+
+    /* Ensure carousel works properly */
+    .carousel-item {
+        transition: transform 0.6s ease-in-out;
+    }
+
+        .carousel-item.active {
+            display: block;
+        }
+</style>
+
+<script>
+    // Carousel functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const carousel = document.getElementById('todayDealsCarousel');
+        if (carousel) {
+            // Initialize Bootstrap carousel
+            const bsCarousel = new bootstrap.Carousel(carousel, {
+                interval: 5000,
+                wrap: true,
+                pause: 'hover'
+            });
+
+            // Auto-advance every 5 seconds (Bootstrap handles this, but we add backup)
+            let autoAdvance = setInterval(() => {
+                bsCarousel.next();
+            }, 5000);
+
+            // Pause auto-advance on hover
+            carousel.addEventListener('mouseenter', () => {
+                clearInterval(autoAdvance);
+            });
+
+            carousel.addEventListener('mouseleave', () => {
+                autoAdvance = setInterval(() => {
+                    bsCarousel.next();
+                }, 5000);
+            });
+        }
+    });
+
+    // Manual navigation functions
+    function nextSlide() {
+        const carousel = document.getElementById('todayDealsCarousel');
+        if (carousel) {
+            const bsCarousel = bootstrap.Carousel.getInstance(carousel);
+            bsCarousel.next();
+        }
+    }
+
+    function prevSlide() {
+        const carousel = document.getElementById('todayDealsCarousel');
+        if (carousel) {
+            const bsCarousel = bootstrap.Carousel.getInstance(carousel);
+            bsCarousel.prev();
+        }
+    }
+</script>

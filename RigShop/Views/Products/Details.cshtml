@@ -1,0 +1,357 @@
+﻿@model RigShop.Web.Models.Product
+@{
+    ViewData["Title"] = "Product Details";
+    var isAdmin = bool.TryParse(Context.Session.GetString("IsAdmin"), out var a) && a;
+    var loggedIn = Context.Session.GetInt32("UserId") != null;
+}
+
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- Product Image -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow-lg border-0">
+                <div class="card-img-top-container-details">
+                    <img src="@Model.ImageUrl" class="card-img-top-details" alt="@Model.Name"
+                         onerror="this.src='https://via.placeholder.com/600x400/3B82F6/FFFFFF?text=PC+Part'">
+                    @if (Model.Stock > 0)
+                    {
+                        <div class="stock-badge in-stock">In Stock</div>
+                    }
+                    else
+                    {
+                        <div class="stock-badge out-of-stock">Out of Stock</div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Product Details -->
+        <div class="col-lg-6">
+            <div class="card shadow-lg border-0 h-100">
+                <div class="card-body p-4">
+                    <!-- Category Badge -->
+                    @if (Model.Category != null)
+                    {
+                        <div class="mb-3">
+                            <span class="badge bg-primary fs-6">
+                                <i class="fas fa-tag me-1"></i>@Model.Category.Name
+                            </span>
+                        </div>
+                    }
+
+                    <!-- Product Name -->
+                    <h1 class="display-5 fw-bold text-dark mb-3">@Model.Name</h1>
+
+                    <!-- Price -->
+                    <div class="price-section mb-4">
+                        <span class="h1 text-primary fw-bold">$@Model.Price.ToString("0.00")</span>
+                        <div class="text-success small mt-1">
+                            <i class="fas fa-shipping-fast me-1"></i>Free shipping
+                        </div>
+                    </div>
+
+                    <!-- Stock Status -->
+                    <div class="stock-section mb-4">
+                        @if (Model.Stock > 0)
+                        {
+                            <div class="d-flex align-items-center text-success">
+                                <i class="fas fa-check-circle me-2 fs-5"></i>
+                                <span class="fw-semibold">@Model.Stock units available</span>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="d-flex align-items-center text-danger">
+                                <i class="fas fa-times-circle me-2 fs-5"></i>
+                                <span class="fw-semibold">Currently out of stock</span>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Add to Cart Section -->
+                    @if (!isAdmin && loggedIn)
+                    {
+                        <div class="add-to-cart-section mb-4">
+                            <form asp-controller="Cart" asp-action="Add" method="post" class="d-flex align-items-center gap-3">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@Model.Id" />
+
+                                <!-- Quantity Selector -->
+                                <div class="quantity-selector">
+                                    <label class="form-label fw-semibold mb-2">Quantity:</label>
+                                    <div class="input-group" style="width: 140px;">
+                                        <button type="button" class="btn btn-outline-secondary" onclick="decreaseQuantity()">-</button>
+                                        <input type="number" name="qty" value="1" min="1" max="@Model.Stock"
+                                               class="form-control text-center quantity-input" id="quantityInput"
+                                               @(Model.Stock <= 0 ? "disabled" : "")>
+                                        <button type="button" class="btn btn-outline-secondary" onclick="increaseQuantity()">+</button>
+                                    </div>
+                                </div>
+
+                                <!-- Add to Cart Button -->
+                                <div class="flex-grow-1">
+                                    <button type="submit" class="btn btn-primary btn-lg w-100 py-3 add-to-cart-btn"
+                                            @(Model.Stock <= 0 ? "disabled" : "")>
+                                        <i class="fas fa-shopping-cart me-2"></i>
+                                        @(Model.Stock > 0 ? "Add to Cart" : "Out of Stock")
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    }
+                    else if (!loggedIn)
+                    {
+                        <div class="alert alert-info mb-4">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Please <a asp-controller="Auth" asp-action="Login" class="alert-link">login</a> to add items to your cart.
+                        </div>
+                    }
+
+                    <!-- Quick Features -->
+                    <div class="features-section mb-4">
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <div class="d-flex align-items-center text-muted">
+                                    <i class="fas fa-shield-alt me-2 text-success"></i>
+                                    <small>2-Year Warranty</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="d-flex align-items-center text-muted">
+                                    <i class="fas fa-undo me-2 text-success"></i>
+                                    <small>30-Day Returns</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="d-flex align-items-center text-muted">
+                                    <i class="fas fa-headset me-2 text-success"></i>
+                                    <small>Support 24/7</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="d-flex align-items-center text-muted">
+                                    <i class="fas fa-truck me-2 text-success"></i>
+                                    <small>Fast Delivery</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="action-buttons d-flex gap-2">
+                        <a asp-action="Index" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Products
+                        </a>
+
+                        @if (isAdmin)
+                        {
+                            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">
+                                <i class="fas fa-edit me-2"></i>Edit Product
+                            </a>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Description Section -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-dark text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-file-alt me-2"></i>Product Description
+                    </h4>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrWhiteSpace(Model.Description))
+                    {
+                        <p class="card-text fs-5">@Model.Description</p>
+                    }
+                    else
+                    {
+                        <p class="card-text text-muted fs-5">
+                            <i>No description available for this product.</i>
+                        </p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Specifications Section -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-dark text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-list-alt me-2"></i>Specifications
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-4 text-muted">Product ID</dt>
+                                <dd class="col-sm-8 fw-semibold">#@Model.Id</dd>
+
+                                <dt class="col-sm-4 text-muted">Category</dt>
+                                <dd class="col-sm-8">@(Model.Category?.Name ?? "Uncategorized")</dd>
+
+                                <dt class="col-sm-4 text-muted">Price</dt>
+                                <dd class="col-sm-8 fw-bold text-primary">$@Model.Price.ToString("0.00")</dd>
+                            </dl>
+                        </div>
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-4 text-muted">Stock</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge @(Model.Stock > 0 ? "bg-success" : "bg-danger") fs-6">
+                                        @Model.Stock units
+                                    </span>
+                                </dd>
+
+                                <dt class="col-sm-4 text-muted">Availability</dt>
+                                <dd class="col-sm-8">
+                                    @if (Model.Stock > 0)
+                                    {
+                                        <span class="text-success fw-semibold">
+                                            <i class="fas fa-check-circle me-1"></i>In Stock
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-danger fw-semibold">
+                                            <i class="fas fa-times-circle me-1"></i>Out of Stock
+                                        </span>
+                                    }
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card-img-top-container-details {
+        position: relative;
+        height: 400px;
+        overflow: hidden;
+        border-radius: 15px 15px 0 0;
+    }
+
+    .card-img-top-details {
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.3s ease;
+    }
+
+    .card:hover .card-img-top-details {
+        transform: scale(1.05);
+    }
+
+    .stock-badge {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        color: white;
+        padding: 8px 15px;
+        border-radius: 20px;
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+
+        .stock-badge.in-stock {
+            background: linear-gradient(45deg, #10B981, #059669);
+        }
+
+        .stock-badge.out-of-stock {
+            background: linear-gradient(45deg, #EF4444, #DC2626);
+        }
+
+    .quantity-selector .input-group {
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    .quantity-selector .btn {
+        border: 2px solid #e5e7eb;
+        background: white;
+        font-weight: bold;
+    }
+
+    .quantity-selector .form-control {
+        border-left: none;
+        border-right: none;
+        border-top: 2px solid #e5e7eb;
+        border-bottom: 2px solid #e5e7eb;
+        font-weight: bold;
+    }
+
+    .add-to-cart-btn {
+        border-radius: 10px;
+        font-weight: bold;
+        transition: all 0.3s ease;
+        background: linear-gradient(45deg, #3B82F6, #1D4ED8);
+        border: none;
+    }
+
+        .add-to-cart-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(59, 130, 246, 0.4);
+        }
+
+        .add-to-cart-btn:disabled {
+            background: #6B7280;
+            cursor: not-allowed;
+        }
+
+    .card {
+        border-radius: 15px;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
+        }
+
+    .features-section .col-6 {
+        padding: 8px;
+    }
+</style>
+
+<script>
+    function increaseQuantity() {
+        const input = document.getElementById('quantityInput');
+        const max = parseInt(input.getAttribute('max')) || 999;
+        const current = parseInt(input.value) || 1;
+        if (current < max) {
+            input.value = current + 1;
+        }
+    }
+
+    function decreaseQuantity() {
+        const input = document.getElementById('quantityInput');
+        const min = parseInt(input.getAttribute('min')) || 1;
+        const current = parseInt(input.value) || 1;
+        if (current > min) {
+            input.value = current - 1;
+        }
+    }
+
+    // Update button text based on quantity
+    document.getElementById('quantityInput').addEventListener('change', function() {
+        const quantity = parseInt(this.value) || 1;
+        const addButton = document.querySelector('.add-to-cart-btn');
+        if (addButton && quantity > 1) {
+            addButton.innerHTML = `<i class="fas fa-shopping-cart me-2"></i>Add ${quantity} to Cart`;
+        } else if (addButton) {
+            addButton.innerHTML = `<i class="fas fa-shopping-cart me-2"></i>Add to Cart`;
+        }
+    });
+</script>

@@ -1,0 +1,244 @@
+﻿@model RigShop.Web.Models.Order
+@{
+    ViewData["Title"] = $"Order #{Model.Id}";
+    var isAdmin = bool.TryParse(Context.Session.GetString("IsAdmin"), out var a) && a;
+}
+
+<div class="container-fluid mt-4">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="display-6 fw-bold text-dark">
+                <i class="fas fa-receipt me-2 text-primary"></i>Order #@Model.Id
+            </h1>
+            <p class="text-muted mb-0">Order placed on @Model.CreatedAt.ToString("MMMM dd, yyyy 'at' h:mm tt")</p>
+        </div>
+        <div class="text-end">
+            <span class="h4 text-primary fw-bold">$@Model.Total.ToString("0.00")</span>
+            <div class="badge bg-success fs-6 mt-1">
+                <i class="fas fa-check-circle me-1"></i>Completed
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Order Items -->
+        <div class="col-lg-8">
+            <div class="card shadow-lg border-0 mb-4">
+                <div class="card-header bg-dark text-white py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-boxes me-2"></i>Order Items (@Model.Items.Count)
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    @foreach (var item in Model.Items)
+                    {
+                        <div class="order-item p-4 border-bottom">
+                            <div class="row align-items-center">
+                                <!-- Product Info -->
+                                <div class="col-md-6">
+                                    <div class="d-flex align-items-center">
+                                        @if (!string.IsNullOrWhiteSpace(item.Product?.ImageUrl))
+                                        {
+                                            <img src="@item.Product.ImageUrl" class="order-item-image rounded me-3" alt="@item.Product.Name">
+                                        }
+                                        else
+                                        {
+                                            <div class="order-item-placeholder rounded me-3">
+                                                <i class="fas fa-microchip"></i>
+                                            </div>
+                                        }
+                                        <div>
+                                            <h6 class="fw-bold mb-1">@item.Product?.Name</h6>
+                                            <small class="text-muted">SKU: #@item.ProductId</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Quantity -->
+                                <div class="col-md-2 text-center">
+                                    <span class="badge bg-primary fs-6">@item.Quantity x</span>
+                                </div>
+
+                                <!-- Unit Price -->
+                                <div class="col-md-2 text-center">
+                                    <span class="text-muted">$@item.UnitPrice.ToString("0.00") each</span>
+                                </div>
+
+                                <!-- Line Total -->
+                                <div class="col-md-2 text-end">
+                                    <span class="h6 fw-bold text-primary">$@((item.Quantity * item.UnitPrice).ToString("0.00"))</span>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Order Summary -->
+        <div class="col-lg-4">
+            <!-- Order Details Card -->
+            <div class="card shadow-lg border-0 mb-4">
+                <div class="card-header bg-dark text-white py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Order Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="order-details">
+                        <div class="detail-item mb-3">
+                            <label class="text-muted small">Order Number</label>
+                            <div class="fw-bold">#@Model.Id</div>
+                        </div>
+                        <div class="detail-item mb-3">
+                            <label class="text-muted small">Order Date</label>
+                            <div class="fw-bold">@Model.CreatedAt.ToString("MMMM dd, yyyy")</div>
+                        </div>
+                        <div class="detail-item mb-3">
+                            <label class="text-muted small">Order Time</label>
+                            <div class="fw-bold">@Model.CreatedAt.ToString("h:mm tt")</div>
+                        </div>
+                        <div class="detail-item mb-3">
+                            <label class="text-muted small">Total Items</label>
+                            <div class="fw-bold">@Model.Items.Sum(i => i.Quantity)</div>
+                        </div>
+                        @if (isAdmin && Model.User != null)
+                        {
+                            <div class="detail-item mb-3">
+                                <label class="text-muted small">Customer</label>
+                                <div class="fw-bold">@Model.User.FullName</div>
+                                <div class="text-muted small">@Model.User.Email</div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Total Card -->
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-dark text-white py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-calculator me-2"></i>Order Total
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="total-breakdown">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Subtotal</span>
+                            <span>$@Model.Total.ToString("0.00")</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Shipping</span>
+                            <span class="text-success">FREE</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Tax</span>
+                            <span>Included</span>
+                        </div>
+                        <hr>
+                        <div class="d-flex justify-content-between mb-0">
+                            <strong class="fs-5">Total</strong>
+                            <strong class="fs-5 text-primary">$@Model.Total.ToString("0.00")</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="d-grid gap-2 mt-4">
+                <a asp-action="Index" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Orders
+                </a>
+                <a asp-controller="Products" asp-action="Index" class="btn btn-primary">
+                    <i class="fas fa-shopping-bag me-2"></i>Shop Again
+                </a>
+                @if (isAdmin)
+                {
+                    <button class="btn btn-outline-warning">
+                        <i class="fas fa-print me-2"></i>Print Invoice
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .order-item {
+        transition: background-color 0.3s ease;
+    }
+
+        .order-item:hover {
+            background-color: #f8f9fa;
+        }
+
+    .order-item-image {
+        width: 60px;
+        height: 60px;
+        object-fit: cover;
+    }
+
+    .order-item-placeholder {
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(45deg, #e5e7eb, #d1d5db);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6b7280;
+        font-size: 1.2rem;
+    }
+
+    .card {
+        border-radius: 15px;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
+        }
+
+    .detail-item label {
+        font-size: 0.875rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .detail-item div {
+        font-size: 1rem;
+    }
+
+    .btn {
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+        background: linear-gradient(45deg, #3B82F6, #1D4ED8);
+        border: none;
+    }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(59, 130, 246, 0.4);
+        }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add smooth animations
+        const orderItems = document.querySelectorAll('.order-item');
+        orderItems.forEach((item, index) => {
+            item.style.opacity = '0';
+            item.style.transform = 'translateX(-20px)';
+
+            setTimeout(() => {
+                item.style.transition = 'all 0.5s ease';
+                item.style.opacity = '1';
+                item.style.transform = 'translateX(0)';
+            }, index * 100);
+        });
+    });
+</script>

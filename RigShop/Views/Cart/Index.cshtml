@@ -1,0 +1,373 @@
+﻿@model List<RigShop.Web.Models.CartItem>
+@{
+    ViewData["Title"] = "Your Cart";
+    decimal total = ViewBag.Total is decimal t ? t : Model.Sum(i => i.LineTotal);
+    var loggedIn = Context.Session.GetInt32("UserId") != null;
+}
+
+<div class="container-fluid mt-4">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="display-6 fw-bold text-dark">
+                <i class="fas fa-shopping-cart me-2 text-primary"></i>Shopping Cart
+            </h1>
+            <p class="text-muted mb-0">Review your items and proceed to checkout</p>
+        </div>
+        <div class="text-end">
+            <span class="h5 text-primary fw-bold">Total: $@total.ToString("0.00")</span>
+        </div>
+    </div>
+
+    <!-- Alert Messages -->
+    @if (TempData["Info"] is string info)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>@info
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["Error"] is string err)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>@err
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (!Model.Any())
+    {
+        <!-- Empty Cart State -->
+        <div class="card shadow-lg border-0 text-center py-5">
+            <div class="card-body">
+                <div class="empty-cart-icon mb-4">
+                    <i class="fas fa-shopping-cart fa-4x text-muted"></i>
+                </div>
+                <h3 class="text-muted mb-3">Your cart is empty</h3>
+                <p class="text-muted mb-4">Looks like you haven't added any items to your cart yet.</p>
+                <a asp-controller="Products" asp-action="Index" class="btn btn-primary btn-lg">
+                    <i class="fas fa-shopping-bag me-2"></i>Start Shopping
+                </a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <!-- Cart Items -->
+            <div class="col-lg-8">
+                <div class="card shadow-lg border-0">
+                    <div class="card-header bg-dark text-white py-3">
+                        <h5 class="mb-0">
+                            <i class="fas fa-list me-2"></i>Cart Items (@Model.Count)
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        @foreach (var item in Model)
+                        {
+                            <div class="cart-item p-4 border-bottom">
+                                <div class="row align-items-center">
+                                    <!-- Product Image & Name -->
+                                    <div class="col-md-5">
+                                        <div class="d-flex align-items-center">
+                                            @if (!string.IsNullOrWhiteSpace(item.ImageUrl))
+                                            {
+                                                <img src="@item.ImageUrl" class="cart-item-image rounded me-3" alt="@item.Name">
+                                            }
+                                            else
+                                            {
+                                                <div class="cart-item-placeholder rounded me-3">
+                                                    <i class="fas fa-microchip"></i>
+                                                </div>
+                                            }
+                                            <div>
+                                                <h6 class="fw-bold mb-1">@item.Name</h6>
+                                                <small class="text-muted">Unit Price: $@item.UnitPrice.ToString("0.00")</small>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Quantity Controls -->
+                                    <div class="col-md-3">
+                                        <form asp-action="Update" method="post" class="quantity-form">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="productId" value="@item.ProductId" />
+                                            <div class="input-group mb-2">
+                                                <button type="button" class="btn btn-outline-secondary quantity-btn" onclick="decreaseQuantity(@item.ProductId)">-</button>
+                                                <input type="number" name="qty" value="@item.Quantity" min="1" max="99"
+                                                       class="form-control text-center quantity-input"
+                                                       id="quantity-@item.ProductId">
+                                                <button type="button" class="btn btn-outline-secondary quantity-btn" onclick="increaseQuantity(@item.ProductId)">+</button>
+                                            </div>
+                                            <button type="submit" class="btn btn-outline-primary btn-sm w-100 update-btn">
+                                                <i class="fas fa-sync-alt me-1"></i>Update Quantity
+                                            </button>
+                                        </form>
+                                    </div>
+
+                                    <!-- Line Total -->
+                                    <div class="col-md-2 text-center">
+                                        <span class="h6 fw-bold text-primary">$@item.LineTotal.ToString("0.00")</span>
+                                    </div>
+
+                                    <!-- Remove Button -->
+                                    <div class="col-md-2 text-end">
+                                        <form asp-action="Remove" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@item.ProductId" />
+                                            <button type="submit" class="btn btn-outline-danger btn-sm remove-btn">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order Summary -->
+            <div class="col-lg-4">
+                <div class="card shadow-lg border-0 sticky-top" style="top: 100px;">
+                    <div class="card-header bg-dark text-white py-3">
+                        <h5 class="mb-0">
+                            <i class="fas fa-receipt me-2"></i>Order Summary
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Item Count -->
+                        <div class="d-flex justify-content-between mb-3">
+                            <span class="text-muted">Items (@Model.Count)</span>
+                            <span>$@total.ToString("0.00")</span>
+                        </div>
+
+                        <!-- Shipping -->
+                        <div class="d-flex justify-content-between mb-3">
+                            <span class="text-muted">Shipping</span>
+                            <span class="text-success">FREE</span>
+                        </div>
+
+                        <!-- Tax -->
+                        <div class="d-flex justify-content-between mb-3">
+                            <span class="text-muted">Tax</span>
+                            <span>Calculated at checkout</span>
+                        </div>
+
+                        <hr>
+
+                        <!-- Total -->
+                        <div class="d-flex justify-content-between mb-4">
+                            <strong class="fs-5">Total</strong>
+                            <strong class="fs-5 text-primary">$@total.ToString("0.00")</strong>
+                        </div>
+
+                        <!-- Checkout Button -->
+                        <form asp-action="Checkout" method="post">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-success btn-lg w-100 py-3 mb-3 checkout-btn">
+                                <i class="fas fa-lock me-2"></i>Proceed to Checkout
+                            </button>
+                        </form>
+
+                        <!-- Continue Shopping -->
+                        <a asp-controller="Products" asp-action="Index" class="btn btn-outline-primary w-100">
+                            <i class="fas fa-arrow-left me-2"></i>Continue Shopping
+                        </a>
+
+                        <!-- Security Badges -->
+                        <div class="text-center mt-4">
+                            <div class="row g-2">
+                                <div class="col-4">
+                                    <div class="text-muted small">
+                                        <i class="fas fa-shield-alt text-success"></i>
+                                        <div>Secure</div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="text-muted small">
+                                        <i class="fas fa-shipping-fast text-success"></i>
+                                        <div>Fast Delivery</div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="text-muted small">
+                                        <i class="fas fa-undo text-success"></i>
+                                        <div>Easy Returns</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    .cart-item {
+        transition: background-color 0.3s ease;
+    }
+
+        .cart-item:hover {
+            background-color: #f8f9fa;
+        }
+
+    .cart-item-image {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+    }
+
+    .cart-item-placeholder {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(45deg, #e5e7eb, #d1d5db);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6b7280;
+        font-size: 1.5rem;
+    }
+
+    .quantity-form .input-group {
+        border-radius: 10px;
+        overflow: hidden;
+        width: 140px;
+        margin: 0 auto;
+    }
+
+    .quantity-btn {
+        border: 2px solid #e5e7eb;
+        background: white;
+        font-weight: bold;
+        width: 40px;
+    }
+
+    .quantity-input {
+        border-left: none;
+        border-right: none;
+        border-top: 2px solid #e5e7eb;
+        border-bottom: 2px solid #e5e7eb;
+        font-weight: bold;
+    }
+
+    .remove-btn {
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+        .remove-btn:hover {
+            transform: scale(1.1);
+            background-color: #dc2626;
+            color: white;
+        }
+
+    .checkout-btn {
+        border-radius: 12px;
+        background: linear-gradient(45deg, #10B981, #059669);
+        border: none;
+        font-weight: bold;
+        transition: all 0.3s ease;
+    }
+
+        .checkout-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(16, 185, 129, 0.4);
+        }
+
+    .card {
+        border-radius: 15px;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
+        }
+
+    .empty-cart-icon {
+        opacity: 0.5;
+    }
+
+    .sticky-top {
+        position: sticky;
+        z-index: 10;
+    }
+
+    /* Responsive adjustments */
+    @@media (max-width: 768px) {
+        .cart-item-image {
+            width: 60px;
+            height: 60px;
+        }
+
+        .cart-item-placeholder {
+            width: 60px;
+            height: 60px;
+            font-size: 1.2rem;
+        }
+
+        .quantity-form .input-group {
+            width: 120px;
+        }
+    }
+</style>
+
+<script>
+    function increaseQuantity(productId) {
+        const input = document.getElementById(`quantity-${productId}`);
+        const current = parseInt(input.value) || 1;
+        if (current < 99) {
+            input.value = current + 1;
+        }
+    }
+
+    function decreaseQuantity(productId) {
+        const input = document.getElementById(`quantity-${productId}`);
+        const current = parseInt(input.value) || 1;
+        if (current > 1) {
+            input.value = current - 1;
+        }
+    }
+
+    // Add loading animation to update buttons
+    document.addEventListener('DOMContentLoaded', function() {
+        const updateForms = document.querySelectorAll('.quantity-form');
+        updateForms.forEach(form => {
+            form.addEventListener('submit', function(e) {
+                const button = this.querySelector('.update-btn');
+                const originalText = button.innerHTML;
+
+                button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Updating...';
+                button.disabled = true;
+            });
+        });
+
+        // Add loading animation to checkout button
+        const checkoutForm = document.querySelector('form[action*="Checkout"]');
+        if (checkoutForm) {
+            checkoutForm.addEventListener('submit', function() {
+                const button = this.querySelector('button[type="submit"]');
+                const originalText = button.innerHTML;
+
+                button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+                button.disabled = true;
+            });
+        }
+
+        // Add smooth animations
+        const cartItems = document.querySelectorAll('.cart-item');
+        cartItems.forEach((item, index) => {
+            item.style.opacity = '0';
+            item.style.transform = 'translateX(-20px)';
+
+            setTimeout(() => {
+                item.style.transition = 'all 0.5s ease';
+                item.style.opacity = '1';
+                item.style.transform = 'translateX(0)';
+            }, index * 100);
+        });
+    });
+</script>

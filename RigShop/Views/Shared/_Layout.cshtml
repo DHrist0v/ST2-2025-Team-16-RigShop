@@ -1,0 +1,148 @@
+﻿<!DOCTYPE html>
+@{
+    var loggedIn = Context.Session.GetInt32("UserId") != null;
+    var isAdmin = bool.TryParse(Context.Session.GetString("IsAdmin"), out var a) && a;
+
+    // Show sidebar on product-related pages and home, but not on auth pages
+    var currentPath = Context.Request.Path;
+    var showSidebar = (currentPath == "/" ||
+                      currentPath.StartsWithSegments("/Products") ||
+                      currentPath.StartsWithSegments("/Home")) &&
+                      currentPath != "/Auth/Login" &&
+                      currentPath != "/Auth/Register";
+}
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - RigShop</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/RigShop.styles.css" asp-append-version="true" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-dark bg-dark border-bottom box-shadow mb-3">
+            <div class="container-fluid">
+                <a class="navbar-brand fw-bold" asp-area="" asp-controller="Home" asp-action="Index">
+                    <i class="fas fa-desktop me-2"></i>RigShop
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+                        aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+                    <ul class="navbar-nav ms-auto">
+                        @if (Context.Session.GetInt32("UserId") != null)
+                        {
+                            <li class="nav-item">
+                                <span class="nav-link text-light">Hello, @Context.Session.GetString("UserEmail")</span>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Auth" asp-action="Logout">
+                                    <i class="fas fa-sign-out-alt me-1"></i>Logout
+                                </a>
+                            </li>
+                            @if (loggedIn && !isAdmin)
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link position-relative" asp-controller="Cart" asp-action="Index">
+                                        <i class="fas fa-shopping-cart me-1"></i>Cart
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="Orders" asp-action="Index">
+                                        <i class="fas fa-clipboard-list me-1"></i>Orders
+                                    </a>
+                                </li>
+                            }
+                        }
+                        else
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Auth" asp-action="Login">
+                                    <i class="fas fa-sign-in-alt me-1"></i>Login
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Auth" asp-action="Register">
+                                    <i class="fas fa-user-plus me-1"></i>Register
+                                </a>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container-fluid">
+        <div class="row">
+            @if (showSidebar)
+            {
+                <!-- Sidebar -->
+                <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
+                    <div class="position-sticky pt-3">
+                        <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted text-uppercase">
+                            <span>Categories</span>
+                        </h6>
+                        <ul class="nav flex-column mb-2" id="categoriesList">
+                            <li class="nav-item">
+                                <a class="nav-link active" asp-controller="Products" asp-action="Index">
+                                    <i class="fas fa-th-large me-2"></i>All Products
+                                </a>
+                            </li>
+                            <!-- Categories will be loaded dynamically -->
+                        </ul>
+                    </div>
+                </nav>
+            }
+
+            <!-- Main content -->
+            <main class="@(showSidebar ? "col-md-9 ms-sm-auto col-lg-10" : "col-12") px-md-4">
+                @RenderBody()
+            </main>
+        </div>
+    </div>
+
+    <footer class="border-top footer text-muted bg-dark text-light">
+        <div class="container">
+            &copy; 2025 - RigShop - <a asp-area="" asp-controller="Home" asp-action="Privacy" class="text-light">Privacy</a>
+        </div>
+    </footer>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    @if (showSidebar)
+    {
+        <!-- Add this script for dynamic categories -->
+        <script>
+            // Load categories dynamically
+            $(document).ready(function() {
+                loadCategories();
+            });
+
+            function loadCategories() {
+                $.get('/Products/GetCategories', function(categories) {
+                    var categoriesList = $('#categoriesList');
+                    categories.forEach(function(category) {
+                        var listItem = $('<li class="nav-item"></li>');
+                        var link = $('<a class="nav-link"></a>')
+                            .attr('href', '/Products/Category/' + category.id)
+                            .html('<i class="fas fa-microchip me-2"></i>' + category.name);
+                        listItem.append(link);
+                        categoriesList.append(listItem);
+                    });
+                }).fail(function() {
+                    console.log('Failed to load categories');
+                });
+            }
+        </script>
+    }
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
